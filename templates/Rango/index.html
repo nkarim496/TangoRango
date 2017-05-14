@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+{% load staticfiles %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rango</title>
+</head>
+<body>
+<h1>Rango says...</h1>
+<div>
+    Hey there partner! This are hints for you man<br />
+    <ul>
+        <li>{{ boldmessage }}</li>
+        <li>Whenever you wish to refer to a static file, use the static template tag!</li>
+    </ul>
+</div>
+<div>
+    <a href="/rango/about/">About</a><br />
+</div>
+<img src="{% static "images/rangos_girlfriend.jpg" %}" alt="Picture of Rango's girlfriend"/>
+</body>
+</html>
