@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+{% load staticfiles %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>About</title>
+</head>
+<body>
+<h1>About Rango</h1>
+<p>Hey there! This is me. Really cute!</p>
+<img src="{% static 'images/author_pic.jpg' %}" alt="author's pic">
+<p>and this is my Emily. Love her!</p>
+<img src="{% static 'images/rangos_girlfriend.jpg' %}" alt="Emily">
+<p>here are my cats</p>
+<img src="{{ MEDIA_URL }}cats.jpg" alt="my cats">
+</body>
+</html>

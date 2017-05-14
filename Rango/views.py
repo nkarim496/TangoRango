@@ -7,4 +7,4 @@ def index(request):
     return render(request, 'rango/index.html', context=context_dic)
 
 def about(request):
-    return HttpResponse('Rango says it is about page. | <a href="/rango">Rango</a> |')
+    return render(request, 'rango/about.html')
