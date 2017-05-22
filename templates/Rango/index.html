@@ -6,13 +6,26 @@
     <title>Rango</title>
 </head>
 <body>
-<h1>Rango says...</h1>
+<h1>Rango</h1>
 <div>
-    Hey there partner! This are hints for you man<br />
-    <ul>
-        <li>{{ boldmessage }}</li>
-        <li>Whenever you wish to refer to a static file, use the static template tag!</li>
-    </ul>
+    {% if categories %}
+        <h2>Most Liked Categories</h2>
+        <ul>
+        {% for category in categories %}
+            <li><a href="/rango/category/{{ category.slug }}">{{ category.name }}</a></li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <strong>There are not categories</strong>
+    {% endif %}
+    {% if top_five_pages %}
+        <h2>Most Viewed Pages</h2>
+        <ul>
+            {% for page in top_five_pages %}
+            <li><a href="{{ page.url }}">{{ page.title }}</a></li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 </div>
 <div>
     <a href="/rango/about/">About</a><br />
