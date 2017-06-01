@@ -1,0 +1,12 @@
+{% extends 'Rango/base.html' %}
+{% block title %}Log in{% endblock %}
+{% block body_block %}
+    <h1>Log in</h1>
+    <form action="." method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" value="log in">
+        <input type="hidden" value="{{ next }}" name="next">
+    </form>
+    <strong>Not a member? <a href="{% url 'registration_register' %}">Register</a></strong>
+{% endblock %}
