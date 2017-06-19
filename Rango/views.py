@@ -1,11 +1,11 @@
-from Rango.forms import CategoryForm, PageForm, UserForm, UserProfileForm
-from django.shortcuts import render
-from Rango.models import Category, Page
-from django.contrib.auth import authenticate, login, logout
+from Rango.forms import CategoryForm, PageForm, UserProfileForm
+from django.shortcuts import render, redirect, get_object_or_404
+from Rango.models import Category, Page, UserProfile
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpResponseRedirect
-from django.core.urlresolvers import reverse
 from datetime import datetime
+from Rango.bing_search import run_query
+from django.contrib.auth.models import User
+from django.http import HttpResponse
 
 
 def get_cookie(request, cookie, default_val=None):
@@ -13,6 +13,16 @@ def get_cookie(request, cookie, default_val=None):
     if not val:
         val = default_val
     return val
+
+
+def get_category_list(max_results=0, starts_with=''):
+    cat_list = []
+    if starts_with:
+        cat_list = Category.objects.filter(name__istartswith=starts_with)
+    if max_results > 0:
+        if len(cat_list) > max_results:
+            cat_list = cat_list[:max_results]
+    return cat_list
 
 
 def visitor_cookie_handler(request):
@@ -45,19 +55,26 @@ def index(request):
 def about(request):
     last_visit = request.session['last_visit'][:-7]
     context = {'last_visit': last_visit}
-    return render(request, 'rango/about.html', context)
+    return render(request, 'Rango/about.html', context)
 
 
 def show_category(request, category_name_slug):
     context = {}
     try:
         category = Category.objects.get(slug=category_name_slug)
-        pages = Page.objects.filter(category=category)
+        pages = Page.objects.filter(category=category).order_by('-views')
         context['category'] = category
         context['pages'] = pages
+        context['query'] = category.name
     except Category.DoesNotExist:
         context['category'] = None
         context['pages'] = None
+    if request.method == 'POST':
+        query = request.POST['query'].strip()
+        if query:
+            result_list = run_query(query)
+            context['query'] = query
+            context['result_list'] = result_list
     return render(request, 'rango/category.html', context)
 
 
@@ -96,55 +113,85 @@ def add_page(request, category_name_slug):
     return render(request, 'Rango/add_page.html', context)
 
 
-def register(request):
-    registered = False
-    if request.method == 'POST':
-        user_form = UserForm(data=request.POST)
-        profile_form = UserProfileForm(data=request.POST)
-        if user_form.is_valid() and profile_form.is_valid():
-            user = user_form.save()
-            user.set_password(user.password)
-            user.save()
-            profile = profile_form.save(commit=False)
-            profile.user = user
-            if 'picture' in request.FILES:
-                profile.picture = request.FILES['picture']
-            profile.save()
-            registered = True
-        else:
-            print(user_form.errors, profile_form.errors)
-    else:
-        user_form = UserForm()
-        profile_form = UserProfileForm()
-    return render(request, 'Rango/register.html', {'user_form': user_form,
-                                                   'profile_form': profile_form,
-                                                   'registered': registered})
-
-
-def user_login(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        user = authenticate(username=username, password=password)
-        if user:
-            if user.is_active:
-                login(request, user)
-                return HttpResponseRedirect(reverse('index'))
-            else:
-                return HttpResponse("Your account is not active")
-        else:
-            print("Invalid login details {} and {}".format(username, password))
-            return HttpResponse("Invalid login details supplied")
-    else:
-        return render(request, 'Rango/login.html', {})
+def track_url(request, page_id):
+    page = get_object_or_404(Page, pk=page_id)
+    page.views += 1
+    page.save()
+    return redirect(page.url)
 
 
 @login_required
-def restricted(request):
-    return HttpResponse("%s, welcome to Darkside" % request.user)
+def register_profile(request):
+    form = UserProfileForm()
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, request.FILES)
+        if form.is_valid():
+            user_profile = form.save(commit=False)
+            user_profile.user = request.user
+            user_profile.save()
+            return redirect('index')
+        else:
+            print(form.errors)
+    return render(request, 'Rango/profile_registration.html', {'form': form})
 
 
 @login_required
-def user_logout(request):
-    logout(request)
-    return HttpResponseRedirect(reverse('index'))
+def profile(request, username):
+    try:
+        user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return redirect('index')
+    userprofile = UserProfile.objects.get_or_create(user=user)[0]
+    form = UserProfileForm({'website': userprofile.website, 'picture': userprofile.picture})
+    if request.method == "POST":
+        form = UserProfileForm(request.POST, request.FILES, instance=userprofile)
+        if form.is_valid():
+            form.save(commit=True)
+            return redirect('rango:profile', user.username)
+        else:
+            print(form.errors)
+    return render(request, 'Rango/profile.html', {'userprofile': userprofile,
+                                                  'selecteduser': user,
+                                                  'form': form})
+
+
+@login_required
+def list_profiles(request):
+    userprofile_list = UserProfile.objects.all()
+    return render(request, 'Rango/list_profiles.html', {'userprofile_list': userprofile_list})
+
+
+@login_required
+def like_category(request):
+    likes = None
+    if request.method == "GET":
+        cat_id = request.GET['category_id']
+        likes = 0
+        if cat_id:
+            cat = Category.objects.get(pk=int(cat_id))
+            if cat:
+                likes = cat.likes + 1
+                cat.likes = likes
+                cat.save()
+    return HttpResponse(likes)
+
+
+def suggest_category(request):
+    starts_with = ''
+    if request.method == 'GET':
+        starts_with = request.GET['suggestion']
+    cat_list = get_category_list(8, starts_with)
+    return render(request, 'Rango/cats.html', {'cats': cat_list})
+
+
+@login_required
+def auto_add_category(request):
+    if request.method == 'GET':
+        cat_id = request.GET['category_id']
+        url = request.GET['url']
+        title = request.GET['title']
+        if cat_id:
+            category = Category.objects.get(pk=int(cat_id))
+            p = Page.objects.get_or_create(category=category, title=title, url=url)
+            pages = Page.objects.filter(category=category).order_by('-views')
+    return render(request, 'Rango/page_list.html', {'pages': pages})

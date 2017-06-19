@@ -1,0 +1,15 @@
+{% extends 'Rango/base.html' %}
+{% block title %}{{ selecteduser.username }} Profile{% endblock %}
+{% block body_block %}
+    <h2 class="form-signin-heading">{{ selecteduser.username }} Profile</h2>
+    <img src="{{ MEDIA_URL }}{{ userprofile.picture }}" width="300" height="300" alt="{{ selecteduser.username }}">
+    {% if selecteduser.username == user.username %}
+    <form role="form" method="post" action="." enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-default" value="Update">Update</button>
+    </form>
+    {% else %}
+        <p><strong>Website:</strong> <a href="{{ userprofile.website }}">{{ userprofile.website }}</a></p>
+    {% endif %}
+{% endblock %}

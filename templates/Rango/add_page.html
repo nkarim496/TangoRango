@@ -1,10 +1,10 @@
 {% extends 'Rango/base.html' %}
 {% block title %}Add Page{% endblock %}
 {% block body_block %}
-<div>
+<link href="http://v4-alpha.getbootstrap.com/examples/signin/signin.css" rel="stylesheet">
     {% if category %}
-        <h1>Add Page</h1>
-        <form action="{% url 'rango:add_page' category.slug %}" method="post" id="add_page_form">
+        <form action="{% url 'rango:add_page' category.slug %}" method="post" id="add_page_form" class="form-signin" role="form">
+            <h2 class="form-signin-heading"> Add a Page to <a href="/rango/category/{{category.slug}}/">{{ category.name }}</a></h2>
             {% csrf_token %}
             {% for field in form.hidden_fields %}
                 {{ field }}
@@ -14,10 +14,9 @@
                 {{ field.help_text }}
                 {{ field }}
             {% endfor %}
-            <input type="submit" value="Create Page" name="submit">
+            <button class="btn btn-primary" type="submit" name="submit">Add Page</button>
         </form>
     {% else %}
-        <strong>A Category doesn't exist!</strong>
+        <strong>This Category doesn't exist!</strong>
     {% endif %}
-</div>
 {% endblock %}
